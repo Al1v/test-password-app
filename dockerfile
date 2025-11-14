@@ -41,8 +41,6 @@ RUN apt-get update \
   && groupadd -r nextjs \
   && useradd -r -g nextjs nextjs
 
-# Create non-root user
-RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 
 RUN mkdir -p /app/db && chown -R nextjs:nextjs /app
 
