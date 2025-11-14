@@ -1,20 +1,36 @@
 import "server-only";
-import NextAuth from "next-auth";
+import NextAuth, { type DefaultSession } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import authConfig from "@/auth.config";
 import { db } from "@/lib/db";
 import { UserRole } from "@/lib/roles";
 import { getUserById } from "@/data/user";
 import { getAccountByUserId } from "@/data/account";
+import type { Adapter } from "@auth/core/adapters";
 
-const authResult = NextAuth({
+// 🔥 Module augmentation for Session goes here
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      role: UserRole;
+      isTwoFactorEnabled: boolean;
+      isOAuth: boolean;
+    } & DefaultSession["user"];
+  }
+}
+export const {
+  handlers: { GET, POST },
+  auth,
+  signIn,
+  signOut,
+} = NextAuth({
   // --- pages (optional) ---
   pages: {
     signIn: "/auth/login",
     error: "/auth/error",
   },
 
-  // --- events ---
   events: {
     async linkAccount({ user }) {
       await db.user.update({
@@ -24,10 +40,11 @@ const authResult = NextAuth({
     },
   },
 
-  // --- callbacks ---
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider !== "credentials") return true;
+
+      if (!user.id) return false;
 
       const existingUser = await getUserById(user.id);
       if (!existingUser) return false;
@@ -39,16 +56,19 @@ const authResult = NextAuth({
       if (token.sub && session.user) {
         session.user.id = token.sub;
       }
-      if (token.role && session.user) {
-        session.user.role = token.role as UserRole;
-      }
+
       if (session.user) {
-        session.user.isTwoFactorEnabled = token.isTwoFactorEnabled as boolean;
-        session.user.name = token.name;
-        session.user.email = token.email;
-        session.user.isOAuth = token.isOAuth as boolean;
+        if (token.role) {
+          session.user.role = token.role as UserRole;
+        }
+
+        session.user.isTwoFactorEnabled = Boolean(token.isTwoFactorEnabled);
+        session.user.isOAuth = Boolean(token.isOAuth);
+
+        session.user.name = token.name ?? session.user.name ?? null;
+        session.user.email = token.email ?? session.user.email ?? null;
       }
-      // expose pending 2FA to client
+
       (session as any).pending2FA = Boolean((token as any).pending2FA);
       return session;
     },
@@ -67,7 +87,6 @@ const authResult = NextAuth({
       token.role = existingUser.role;
       token.isTwoFactorEnabled = existingUser.isTwoFactorEnabled;
 
-      // carry pending2FA flag from Credentials authorize
       if (user && (user as any).pending2FA) {
         (token as any).pending2FA = true;
       } else if (user) {
@@ -78,19 +97,8 @@ const authResult = NextAuth({
     },
   },
 
-  // --- adapter & session ---
-  adapter: PrismaAdapter(db),
+  adapter: PrismaAdapter(db) as Adapter,
   session: { strategy: "jwt" },
 
-  // --- providers & anything else from your auth.config ---
   ...authConfig,
 });
-
-// exports
-export const auth = authResult.auth;
-export const signIn = authResult.signIn;
-export const signOut = authResult.signOut;
-export const update = authResult.update;
-
-export const GET = authResult.handlers.GET;
-export const POST = authResult.handlers.POST;

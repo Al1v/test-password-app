@@ -6,7 +6,6 @@ const ISSUER = "TestPasswordApp"; // Shown in Google Authenticator / 1Password
 authenticator.options = {
     step: 30,       // 30-second period
     digits: 6,      // 6 digits
-    algorithm: "sha1",
     window: 1,      // allow slight drift
 };
 
@@ -21,7 +20,5 @@ export async function otpauthToDataURL(otpauth: string) {
 }
 
 export function verifyTotp(token: string, secret: string) {
-    console.log({token})
-    console.log({secret})
     return authenticator.verify({ token, secret });
 }

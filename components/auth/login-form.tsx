@@ -97,11 +97,12 @@ export const LoginForm = () => {
             }
 
             // STEP 2 — actually sign in with 2FA code using Auth.js
+// STEP 2 — actually sign in with 2FA code using Auth.js
             const res = await signIn("credentials", {
                 email: values.email,
                 password: values.password,
                 twoFactorCode: values.code || undefined,
-                redirect: true,                           // default
+                redirect: false,
                 redirectTo: toAbsolute(callbackUrl || "/")
             });
 
@@ -111,8 +112,11 @@ export const LoginForm = () => {
             }
 
             setError(
-                res?.error === "CredentialsSignin" ? "Invalid code" : res?.error || "Something went wrong"
+                res?.error === "CredentialsSignin"
+                    ? "Invalid code"
+                    : res?.error || "Something went wrong"
             );
+
         });
     };
 

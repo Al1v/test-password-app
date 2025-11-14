@@ -3,9 +3,7 @@
 
 import * as z from "zod";
 import bcrypt from "bcryptjs";
-import { AuthError } from "next-auth";
 
-import { db } from "@/lib/db";
 import { signIn } from "@/auth";
 import { LoginSchema } from "@/schemas";
 import { getUserByEmail } from "@/data/user";
@@ -41,15 +39,16 @@ export const login = async (
     });
     // If signIn doesn’t redirect (e.g., testing), you could return success here.
     return { success: "Logged in!" };
-  } catch (err) {
-    if (err instanceof AuthError) {
-      switch (err.type) {
-        case "CredentialsSignin":
-          return { error: "Invalid credentials!" };
-        default:
-          return { error: "Something went wrong!" };
-      }
+  } catch (error) {
+    const err = error as { type?: string } | undefined;
+
+    if (err?.type === "CredentialsSignin") {
+      return { error: "Invalid credentials" };
     }
-    throw err;
+
+    // here you can also check other error types if you want
+    // https://errors.authjs.dev/ lists them all
+
+    return { error: "Something went wrong!" };
   }
 };

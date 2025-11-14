@@ -19,8 +19,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const body = await req.json().catch(() => null);
     const parsed = UpdateSchema.safeParse(body);
     if (!parsed.success) {
-        return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+        const error = (parsed as z.SafeParseError<z.infer<typeof UpdateSchema>>).error;
+        return NextResponse.json({ error: error.flatten() }, { status: 400 });
     }
+
 
     const exists = await prisma.vaultItem.findFirst({
         where: { id: params.id, userId: session.user.id },
