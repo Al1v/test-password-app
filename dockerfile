@@ -1,9 +1,15 @@
 # --- Base image ---
-FROM node:20-alpine AS base
+FROM node:20-bookworm-slim AS base
 WORKDIR /app
 
 # --- Dependencies (cached layer) ---
 FROM base AS deps
+
+# Install OpenSSL & CA certificates (needed by Prisma)
+RUN apt-get update \
+  && apt-get install -y openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY package*.json ./
 RUN npm ci
 
@@ -21,14 +27,19 @@ RUN npx prisma generate
 RUN npm run build
 
 # --- Runner (final slim image) ---
-FROM node:20-alpine AS runner
+FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 
-RUN apk add --no-cache openssl1.1-compat
+# Install OpenSSL & CA certs in runtime too (for Prisma & HTTPS)
+RUN apt-get update \
+  && apt-get install -y openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && groupadd -r nextjs \
+  && useradd -r -g nextjs nextjs
 
 # Create non-root user
 RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
