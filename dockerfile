@@ -28,10 +28,11 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 
+RUN apk add --no-cache openssl1.1-compat
+
 # Create non-root user
 RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 
-# ✅ Ensure DB folder exists and is writable
 RUN mkdir -p /app/db && chown -R nextjs:nextjs /app
 
 # Copy only needed files
