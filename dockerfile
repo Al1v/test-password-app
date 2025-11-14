@@ -40,7 +40,7 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/next.config.mjs ./next.config.mjs
+COPY --from=builder /app/next.config.js ./next.config.js
 
 USER nextjs
 
